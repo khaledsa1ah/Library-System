@@ -578,14 +578,12 @@ void addToLabelIDListForBook(string labelFileName, string ISBN, short RNN) {
     updateLabelIDList(labelFileName, labelIDList, labelIDListNumRec, labelIDListFile);
 }
 
-void addNewBook() {
+void addNewBook(Book book) {
     fstream file("books.txt", ios::in | ios::out | ios::binary);
     file.seekg(sizeof(short), ios::beg);
     short numRec;
     file.read((char *) &numRec, sizeof(numRec));
 
-    Book book;
-    cin >> book; // Assuming you have implemented the operator>> for Book
 
     // read from user
     string bookString = book.format(); // format to string
@@ -619,14 +617,120 @@ void addNewBook() {
     file.close();
 }
 
+void deleteBook(string ISBN) {
+    // Open files
+    fstream file("books.txt", ios::in | ios::out | ios::binary);
+    fstream primaryIndexFile("primary_index_ISBN.txt", ios::in | ios::out | ios::binary);
 
-void updateBookTitle() {
+    // Get the number of books
+    file.seekg(sizeof(short), ios::beg);
+    short numRec;
+    file.read((char*)&numRec, sizeof(numRec));
 
+    // Read the primary index into main memory
+    PIndex primaryIndex[numRec];
+    primaryIndexFile.seekg(0, ios::beg);
+    readPrimaryIndex(primaryIndex, numRec, primaryIndexFile);
+    primaryIndexFile.close();
+
+    // Search for the book using the primary index
+    int pos = primaryIndexSearch(primaryIndex, numRec, ISBN);
+
+    // If not found, print a message and return
+    if (pos == -1) {
+        cout << "Book not found" << endl;
+        return;
+    }
+
+    // Read the record to know the length of the record
+    Book book;
+    short len;
+    file.seekg(primaryIndex[pos].RNN, ios::beg);
+    file.read((char*)&len, sizeof(len));
+    char bookString[len + 1];
+    file.read(bookString, len);
+    bookString[len] = '\0';
+    book.parse(bookString);
+
+    // Read the header of the avail list
+    short AvailList;
+    file.seekg(0, ios::beg);
+    file.read((char*)&AvailList, sizeof(AvailList));
+
+    // Update the header of the avail list
+    file.seekp(0, ios::beg);
+    string deletedBook = formatDeletedRecord(AvailList, len);
+    AvailList = primaryIndex[pos].RNN;
+    file.write((char*)&AvailList, sizeof(AvailList));
+
+    // Update the record with the deleted record
+    file.seekp(AvailList, ios::beg);
+    short deletedBookLen = (short)deletedBook.length();
+    file.write((char*)&deletedBookLen, sizeof(deletedBookLen));
+    file.write(deletedBook.c_str(), len);
+
+    // Update the number of records
+    file.seekp(sizeof(short), ios::beg);
+    numRec--;
+    file.write((char*)&numRec, sizeof(numRec));
+
+    // Update the primary index in main memory
+    for (int i = pos; i < numRec; i++) {
+        primaryIndex[i] = primaryIndex[i + 1];
+    }
+
+    // Update the primary index file
+    updatePrimaryIndex("primary_index_ISBN.txt", primaryIndex, numRec, primaryIndexFile);
 }
 
-void deleteBook() {
 
+void updateBookTitle(){
+
+    // Get old book title
+    string ISBN;
+    cout << "Enter Book ISBN: " << endl;
+    cin >> ISBN;
+
+    // Get the number of books
+    fstream file("books.txt", ios::in | ios::out | ios::binary);
+    file.seekg(sizeof(short), ios::beg);
+    short numRec;
+    file.read((char*)&numRec, sizeof numRec);
+    file.close();
+
+    // Open index file and search for the book
+    fstream primaryIndexFile("primary_index_ISBN.txt", ios::in | ios::out | ios::binary);
+    PIndex primaryIndexArr[numRec];
+    file.seekg(0, ios::beg);
+    readPrimaryIndex(primaryIndexArr, numRec, primaryIndexFile);
+    int pos = primaryIndexSearch(primaryIndexArr, numRec, ISBN);
+
+    // if not found print not found and return
+    if(pos == -1){
+        cout << "Book not found" << endl;
+        return;
+    }
+    // Get new book title
+    string newBookTitle;
+    cout << "Enter new Book title: " << endl;
+    cin >> newBookTitle;
+
+    Book book;
+
+    file.open("books.txt", ios::in | ios::out | ios::binary);
+    file.seekg(primaryIndexArr[pos].RNN, ios::beg);
+    short bookLen;
+    file.read((char*) &bookLen, sizeof bookLen);
+    char bookOldRecord[bookLen + 1];
+    file.read(bookOldRecord, bookLen);
+    bookOldRecord[bookLen] = '\0';
+    book.parse(bookOldRecord);
+
+    deleteBook(book.ISBN);
+    strcpy(book.title, newBookTitle.c_str());
+    addNewBook(book);
 }
+
 
 void printBook() {
     string ISBN;
@@ -769,17 +873,24 @@ int main() {
                 addNewAuthor(author); // done
                 break;
             }
-            case 2:
-                addNewBook();
+            case 2: {
+                Book book;
+                cin >> book;
+                addNewBook(book);
                 break;
+            }
             case 3:
                 updateAuthorName(); // done
                 break;
             case 4:
                 updateBookTitle();
                 break;
-            case 5:
-                deleteBook();
+            case 5:{
+                string ISBN;
+                cout << "Enter Book ISBN" << endl;
+                cin >> ISBN;
+                deleteBook(ISBN);
+            }
                 break;
             case 6: { // done
                 string authorID;
