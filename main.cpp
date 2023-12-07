@@ -6,50 +6,57 @@ const char DELETE_FLAG = '*';
 const char DELIMITER = '|';
 const short FREE = -2;
 
-struct PIndex{
+struct PIndex {
     char key[15]{};
     short RNN = -1;
-    bool operator < (const PIndex & other) const{
+
+    bool operator<(const PIndex &other) const {
         return strcmp(key, other.key) < 0;
     }
 };
 
-struct SIndex{
+struct SIndex {
     char key[30]{};
     short RNN;
-    bool operator < (const SIndex & other) const{
+
+    bool operator<(const SIndex &other) const {
         return strcmp(key, other.key) < 0;
     }
 };
 
-struct LabelIDList{
+struct LabelIDList {
     char primaryIndex[15]{};
     short RNN;
 };
 
-struct Author{
+struct Author {
     char ID[15]{}; // primary key
     char name[30]{}; // secondary key
     char address[30]{};
-    string format(){
+
+    string format() {
         return string(ID) + "|" + string(name) + "|" + string(address);
     }
-    void parse(string s){
+
+    void parse(string s) {
         int i = 0;
-        for(; s[i] != DELIMITER; i++);
+        for (; s[i] != DELIMITER; i++);
         strcpy(ID, s.substr(0, i).c_str());
         i++;
         int old = i;
-        for(; s[i] != DELIMITER; i++);
+        for (; s[i] != DELIMITER; i++);
         strcpy(name, s.substr(old, i - old).c_str());
         i++;
         strcpy(address, s.substr(i).c_str());
     }
-    friend ostream& operator << (ostream & out, const Author & author){
-        out << "Author ID: " << author.ID << "\n" << "Author Name: " << author.name << "\n" << "Author Address: " << author.address;
+
+    friend ostream &operator<<(ostream &out, const Author &author) {
+        out << "Author ID: " << author.ID << "\n" << "Author Name: " << author.name << "\n" << "Author Address: "
+            << author.address;
         return out;
     }
-    friend istream& operator >> (istream & in, Author & author){
+
+    friend istream &operator>>(istream &in, Author &author) {
         string input;
         cout << "Enter Author ID: " << endl;
         cin >> input;
@@ -64,13 +71,48 @@ struct Author{
     }
 };
 
-struct Book{
+struct Book {
     char ISBN[15]{}; // primary key
     char authorID[15]{}; // secondary key
     char title[30]{};
+
+    string format() {
+        return string(ISBN) + "|" + string(authorID) + "|" + string(title);
+    }
+
+    void parse(string s) {
+        int i = 0;
+        for (; s[i] != DELIMITER; i++);
+        strcpy(ISBN, s.substr(0, i).c_str());
+        i++;
+        int old = i;
+        for (; s[i] != DELIMITER; i++);
+        strcpy(authorID, s.substr(old, i - old).c_str());
+        i++;
+        strcpy(title, s.substr(i).c_str());
+    }
+
+    friend ostream &operator<<(ostream &out, const Book &book) {
+        out << "ISBN: " << book.ISBN << "\n" << "Author ID: " << book.authorID << "\n" << "Title: " << book.title;
+        return out;
+    }
+
+    friend istream &operator>>(istream &in, Book &book) {
+        string input;
+        cout << "Enter ISBN: " << endl;
+        cin >> input;
+        strcpy(book.ISBN, input.c_str());
+        cout << "Enter Author ID: " << endl;
+        cin >> input;
+        strcpy(book.authorID, input.c_str());
+        cout << "Enter Title: " << endl;
+        cin >> input;
+        strcpy(book.title, input.c_str());
+        return in;
+    }
 };
 
-int menu(){
+int menu() {
     cout << "1. Add New Author" << endl;
     cout << "2. Add New Book" << endl;
     cout << "3. Update Author Name (Author ID)" << endl;
@@ -87,90 +129,88 @@ int menu(){
     return choice;
 }
 
-string formatDeletedRecord(short next, short space){
+string formatDeletedRecord(short next, short space) {
     string s = DELETE_FLAG + to_string(next) + DELIMITER + to_string(space);
     return s;
 }
 
-pair<short, short> parseDeletedRecord(string s){
+pair<short, short> parseDeletedRecord(string s) {
     short next = 0, space = 0;
     int i = 1;
-    for(; s[i] != DELIMITER; i++);
+    for (; s[i] != DELIMITER; i++);
     next = stoi(s.substr(1, i));
     space = stoi(s.substr(i + 1));
     return {next, space};
 }
 
-void writePrimaryIndex(PIndex primaryIndexArray[], short numRec, fstream&outFile) {
+void writePrimaryIndex(PIndex primaryIndexArray[], short numRec, fstream &outFile) {
     for (int i = 0; i < numRec; i++)
-        outFile.write((char*) &primaryIndexArray[i], sizeof primaryIndexArray[i]);
+        outFile.write((char *) &primaryIndexArray[i], sizeof primaryIndexArray[i]);
 }
 
-void writeSecondaryIndex(SIndex secondIndexArray[], short numRec, fstream&outFile) {
+void writeSecondaryIndex(SIndex secondIndexArray[], short numRec, fstream &outFile) {
     for (int i = 0; i < numRec; i++)
-        outFile.write((char*) &secondIndexArray[i], sizeof secondIndexArray[i]);
+        outFile.write((char *) &secondIndexArray[i], sizeof secondIndexArray[i]);
 }
 
-void writeLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream&outFile) {
+void writeLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream &outFile) {
     for (int i = 0; i < numRec; i++)
-        outFile.write((char*) &labelIDListArray[i], sizeof labelIDListArray[i]);
+        outFile.write((char *) &labelIDListArray[i], sizeof labelIDListArray[i]);
 }
 
-void readPrimaryIndex(PIndex primaryIndexArray[], short numRec, fstream& inFile) {
+void readPrimaryIndex(PIndex primaryIndexArray[], short numRec, fstream &inFile) {
     for (int i = 0; i < numRec; i++)
-        inFile.read((char*) &primaryIndexArray[i], sizeof primaryIndexArray[i]);
+        inFile.read((char *) &primaryIndexArray[i], sizeof primaryIndexArray[i]);
 }
 
-void readSecondaryIndex(SIndex secondIndexArray[], short numRec, fstream& inFile) {
+void readSecondaryIndex(SIndex secondIndexArray[], short numRec, fstream &inFile) {
     for (int i = 0; i < numRec; i++)
         inFile.read((char *) &secondIndexArray[i], sizeof secondIndexArray[i]);
 }
 
-void readLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream&inFile) {
+void readLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream &inFile) {
     for (int i = 0; i < numRec; i++)
-        inFile.read((char*) &labelIDListArray[i], sizeof labelIDListArray[i]);
+        inFile.read((char *) &labelIDListArray[i], sizeof labelIDListArray[i]);
 }
 
-int primaryIndexSearch(PIndex primaryIndex[], short numRec, string &key){
+int primaryIndexSearch(PIndex primaryIndex[], short numRec, string &key) {
     int l = 0, r = numRec - 1;
-    while(l <= r){
+    while (l <= r) {
         int mid = (l + r) / 2;
-        if(strcmp(primaryIndex[mid].key, key.c_str()) == 0){
+        if (strcmp(primaryIndex[mid].key, key.c_str()) == 0) {
             return mid;
         }
-        if(strcmp(primaryIndex[mid].key, key.c_str()) > 0){
+        if (strcmp(primaryIndex[mid].key, key.c_str()) > 0) {
             r = mid - 1;
-        }
-        else{
+        } else {
             l = mid + 1;
         }
     }
     return -1;
 }
 
-int secondaryIndexSearch(SIndex secondaryIndex[], short numRec, string &key){
+int secondaryIndexSearch(SIndex secondaryIndex[], short numRec, string &key) {
     int l = 0, r = numRec - 1;
-    while(l <= r){
+    while (l <= r) {
         int mid = (l + r) / 2;
-        if(strcmp(secondaryIndex[mid].key, key.c_str()) == 0){
+        if (strcmp(secondaryIndex[mid].key, key.c_str()) == 0) {
             return mid;
         }
-        if(strcmp(secondaryIndex[mid].key, key.c_str()) > 0){
+        if (strcmp(secondaryIndex[mid].key, key.c_str()) > 0) {
             r = mid - 1;
-        }
-        else{
+        } else {
             l = mid + 1;
         }
     }
     return -1;
 }
 
-void checkAvailList(fstream& file, short& RNN, short len){
+void checkAvailList(fstream &file, short &RNN, short len) {
     short AvailList;
     file.seekg(0, ios::beg);
     file.read((char *) &AvailList, sizeof(AvailList));
     short prev = -1, prevSpace = -1;
-    while(~AvailList) {
+    while (~AvailList) {
         // read the deleted record
         file.seekg(AvailList, ios::beg);
         short deletedRecordLen = 0;
@@ -182,10 +222,10 @@ void checkAvailList(fstream& file, short& RNN, short len){
 
         // check if the deleted record is large enough
         if (deletedRecordInfo.second >= len) {
-            if(prev == -1){ // if this was the first record update avail list
+            if (prev == -1) { // if this was the first record update avail list
                 file.seekg(0, ios::beg);
                 file.write((char *) &deletedRecordInfo.first, sizeof(deletedRecordInfo.second));
-            } else{ // if this was not the first record update the next of the previous record
+            } else { // if this was not the first record update the next of the previous record
                 file.seekg(prev, ios::beg);
                 string prevDeletedRecord = formatDeletedRecord(deletedRecordInfo.first, prevSpace);
                 char prevDeletedRecordChar[prevDeletedRecord.size() + 1];
@@ -206,7 +246,8 @@ void checkAvailList(fstream& file, short& RNN, short len){
     }
 }
 
-void updateSecondaryIndex(string fileName, SIndex secondaryIndex[], short secondaryIndexNumRec, fstream &secondaryIndexFile){
+void updateSecondaryIndex(string fileName, SIndex secondaryIndex[], short secondaryIndexNumRec,
+                          fstream &secondaryIndexFile) {
     sort(secondaryIndex, secondaryIndex + secondaryIndexNumRec);
     secondaryIndexFile.open(fileName.c_str(), ios::out | ios::trunc);
     secondaryIndexFile.seekp(0, ios::beg);
@@ -215,7 +256,7 @@ void updateSecondaryIndex(string fileName, SIndex secondaryIndex[], short second
     secondaryIndexFile.close();
 }
 
-void updateLabelIDList(string fileName, LabelIDList labelIDList[], short labelIDListNumRec, fstream &labelIDListFile){
+void updateLabelIDList(string fileName, LabelIDList labelIDList[], short labelIDListNumRec, fstream &labelIDListFile) {
     labelIDListFile.open(fileName, ios::out | ios::trunc);
     labelIDListFile.seekp(0, ios::beg);
     labelIDListFile.write((char *) &labelIDListNumRec, sizeof(labelIDListNumRec));
@@ -223,7 +264,7 @@ void updateLabelIDList(string fileName, LabelIDList labelIDList[], short labelID
     labelIDListFile.close();
 }
 
-void updatePrimaryIndex(string fileName, PIndex primaryIndex[], short primaryIndexNumRec, fstream &primaryIndexFile){
+void updatePrimaryIndex(string fileName, PIndex primaryIndex[], short primaryIndexNumRec, fstream &primaryIndexFile) {
     sort(primaryIndex, primaryIndex + primaryIndexNumRec);
     primaryIndexFile.open(fileName.c_str(), ios::out | ios::trunc);
     primaryIndexFile.seekp(0, ios::beg);
@@ -231,7 +272,7 @@ void updatePrimaryIndex(string fileName, PIndex primaryIndex[], short primaryInd
     primaryIndexFile.close();
 }
 
-void addToPrimaryIndex(string fileName, short numRec, char key[], short RNN){
+void addToPrimaryIndex(string fileName, short numRec, char key[], short RNN) {
     fstream primaryIndexFile(fileName.c_str(), ios::in | ios::out | ios::binary);
     PIndex primaryIndex[numRec + 1];
     primaryIndexFile.seekg(0, ios::beg);
@@ -244,7 +285,7 @@ void addToPrimaryIndex(string fileName, short numRec, char key[], short RNN){
     updatePrimaryIndex(fileName, primaryIndex, numRec + 1, primaryIndexFile);
 }
 
-void addToSecondaryIndex(string secondaryFileName, string labelFileName, char secondaryKey[], char primaryKey[]){
+void addToSecondaryIndex(string secondaryFileName, string labelFileName, char secondaryKey[], char primaryKey[]) {
     fstream secondaryIndexFile(secondaryFileName.c_str(), ios::in | ios::out | ios::binary);
     short secondaryIndexNumRec;
     secondaryIndexFile.seekg(0, ios::beg);
@@ -254,7 +295,7 @@ void addToSecondaryIndex(string secondaryFileName, string labelFileName, char se
     secondaryIndexFile.close();
     string authorName = secondaryKey;
     int index = secondaryIndexSearch(secondaryIndex, secondaryIndexNumRec, authorName);
-    if(index == -1){
+    if (index == -1) {
         // if the author name is not in the secondary index
         // add it to the secondary index
         strcpy(secondaryIndex[secondaryIndexNumRec].key, authorName.c_str());
@@ -271,8 +312,8 @@ void addToSecondaryIndex(string secondaryFileName, string labelFileName, char se
     readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
     labelIDListFile.close();
     short i = 0;
-    for(; i <= labelIDListNumRec; i++){
-        if(labelIDList[i].RNN == FREE || i == labelIDListNumRec){
+    for (; i <= labelIDListNumRec; i++) {
+        if (labelIDList[i].RNN == FREE || i == labelIDListNumRec) {
             strcpy(labelIDList[i].primaryIndex, primaryKey);
             labelIDList[i].RNN = secondaryIndex[index].RNN;
             secondaryIndex[index].RNN = i;
@@ -284,15 +325,16 @@ void addToSecondaryIndex(string secondaryFileName, string labelFileName, char se
     updateLabelIDList(labelFileName, labelIDList, labelIDListNumRec, labelIDListFile);
 }
 
-void removeRecordFromSecondaryIndex(SIndex secondaryIndex[],  LabelIDList labelIDList[], short secondaryIndexNumRec, char key[], string &secondaryKey){
+void removeRecordFromSecondaryIndex(SIndex secondaryIndex[], LabelIDList labelIDList[], short secondaryIndexNumRec,
+                                    char key[], string &secondaryKey) {
     // delete the record with the old name
     string Key = string(key);
     short index = secondaryIndexSearch(secondaryIndex, secondaryIndexNumRec, secondaryKey);
     short RNN = secondaryIndex[index].RNN;
     int prev = -1;
-    while(~RNN){
-        if(strcmp(labelIDList[RNN].primaryIndex, key) == 0){
-            if(prev == -1){
+    while (~RNN) {
+        if (strcmp(labelIDList[RNN].primaryIndex, key) == 0) {
+            if (prev == -1) {
                 secondaryIndex[index].RNN = labelIDList[RNN].RNN;
             } else {
                 labelIDList[prev].RNN = labelIDList[RNN].RNN;
@@ -305,7 +347,7 @@ void removeRecordFromSecondaryIndex(SIndex secondaryIndex[],  LabelIDList labelI
     }
 }
 
-void addNewAuthor(Author author){
+void addNewAuthor(Author author) {
     fstream file("authors.txt", ios::in | ios::out | ios::binary);
     file.seekg(sizeof(short), ios::beg);
     short numRec;
@@ -319,7 +361,7 @@ void addNewAuthor(Author author){
 
     // check avail list
     checkAvailList(file, RNN, len);
-    if(RNN != file.tellp()){
+    if (RNN != file.tellp()) {
         file.seekp(0, ios::end);
     }
 
@@ -340,7 +382,7 @@ void addNewAuthor(Author author){
     file.close();
 }
 
-void deleteAuthor(string authorID){
+void deleteAuthor(string authorID) {
     // open files
     fstream file("authors.txt", ios::in | ios::out | ios::binary);
     fstream primaryIndexFile("primary_index_authorID.txt", ios::in | ios::out | ios::binary);
@@ -355,7 +397,7 @@ void deleteAuthor(string authorID){
     int pos = primaryIndexSearch(primaryIndex, numRec, authorID);
 
     // if not found print not found and return
-    if(pos == -1){
+    if (pos == -1) {
         cout << "Author not found" << endl;
         return;
     }
@@ -396,7 +438,7 @@ void deleteAuthor(string authorID){
     file.write((char *) &numRec, sizeof(numRec));
 
     // update the primary index in main memory
-    for(int i = pos; i < numRec; i++){
+    for (int i = pos; i < numRec; i++) {
         primaryIndex[i] = primaryIndex[i + 1];
     }
     primaryIndexFile.close();
@@ -434,7 +476,7 @@ void deleteAuthor(string authorID){
     updatePrimaryIndex("primary_index_authorID.txt", primaryIndex, numRec, primaryIndexFile);
 }
 
-void updateAuthorName(){
+void updateAuthorName() {
     string authorID;
     cout << "Enter Author ID: " << endl;
     cin >> authorID;
@@ -456,7 +498,7 @@ void updateAuthorName(){
     int pos = primaryIndexSearch(primaryIndex, numRec, authorID);
 
     // if not found print not found and return
-    if(pos == -1){
+    if (pos == -1) {
         cout << "Author not found" << endl;
         return;
     }
@@ -484,7 +526,7 @@ void updateAuthorName(){
     addNewAuthor(author);
 }
 
-void printAuthor(){
+void printAuthor() {
     string authorID;
     cout << "Enter Author ID: " << endl;
     cin >> authorID;
@@ -497,7 +539,7 @@ void printAuthor(){
     primaryIndexFile.seekg(0, ios::beg);
     readPrimaryIndex(primaryIndex, numRec, primaryIndexFile);
     int pos = primaryIndexSearch(primaryIndex, numRec, authorID);
-    if(pos == -1){
+    if (pos == -1) {
         cout << "Author not found" << endl;
         return;
     }
@@ -515,38 +557,133 @@ void printAuthor(){
     primaryIndexFile.close();
 }
 
-void addNewBook(){
+void addToLabelIDListForBook(string labelFileName, string ISBN, short RNN) {
+    fstream labelIDListFile(labelFileName.c_str(), ios::in | ios::out | ios::binary);
+    short labelIDListNumRec;
+    labelIDListFile.seekg(0, ios::beg);
+    labelIDListFile.read((char *) &labelIDListNumRec, sizeof(labelIDListNumRec));
+    LabelIDList labelIDList[labelIDListNumRec + 1];
+    readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
+    labelIDListFile.close();
+
+    short i = 0;
+    for (; i <= labelIDListNumRec; i++) {
+        if (labelIDList[i].RNN == FREE || i == labelIDListNumRec) {
+            strcpy(labelIDList[i].primaryIndex, ISBN.c_str());
+            labelIDList[i].RNN = RNN;
+            break;
+        }
+    }
+    labelIDListNumRec += (i == labelIDListNumRec);
+    updateLabelIDList(labelFileName, labelIDList, labelIDListNumRec, labelIDListFile);
+}
+
+void addNewBook() {
+    fstream file("books.txt", ios::in | ios::out | ios::binary);
+    file.seekg(sizeof(short), ios::beg);
+    short numRec;
+    file.read((char *) &numRec, sizeof(numRec));
+
+    Book book;
+    cin >> book; // Assuming you have implemented the operator>> for Book
+
+    // read from user
+    string bookString = book.format(); // format to string
+    short len = (short) bookString.size();
+    file.seekp(0, ios::end);
+    short RNN = (short) file.tellp();
+
+    // check avail list
+    checkAvailList(file, RNN, len);
+    if (RNN != file.tellp()) {
+        file.seekp(0, ios::end);
+    }
+
+    // write to file
+    file.write((char *) &len, sizeof(len));
+    file.write(bookString.c_str(), len);
+
+    // add the new record to the primary index file
+    addToPrimaryIndex("primary_index_ISBN.txt", numRec, book.ISBN, RNN);
+
+    // add the new record to the secondary index file
+    addToSecondaryIndex("secondary_index_authorID.txt", "label_id_list_books.txt", book.authorID, book.ISBN);
+
+    // add the new record to the label id list
+    addToLabelIDListForBook("label_id_list_books.txt", book.ISBN, RNN);
+
+    // update the number of records
+    numRec++;
+    file.seekp(sizeof(short), ios::beg);
+    file.write((char *) &numRec, sizeof(numRec));
+    file.close();
+}
+
+
+void updateBookTitle() {
 
 }
 
-void updateBookTitle(){
+void deleteBook() {
 
 }
 
-void deleteBook(){
+void printBook() {
+    string ISBN;
+    cout << "Enter ISBN: ";
+    cin >> ISBN;
+
+    fstream file("books.txt", ios::in | ios::out | ios::binary);
+    fstream primaryIndexFile("primary_index_ISBN.txt", ios::in | ios::out | ios::binary);
+
+    file.seekg(sizeof(short), ios::beg);
+    short numRec;
+    file.read((char *) &numRec, sizeof(numRec));
+
+    PIndex primaryIndex[numRec];
+    primaryIndexFile.seekg(0, ios::beg);
+    readPrimaryIndex(primaryIndex, numRec, primaryIndexFile);
+
+    int pos = primaryIndexSearch(primaryIndex, numRec, ISBN);
+
+    if (pos == -1) {
+        cout << "Book not found" << endl;
+        return;
+    }
+
+    int RNN = primaryIndex[pos].RNN;
+    short len;
+    file.seekg(RNN, ios::beg);
+    file.read((char *) &len, sizeof(len));
+    char bookRecord[len + 1];
+    file.read(bookRecord, len);
+    bookRecord[len] = '\0';
+
+    Book bookObj;
+    bookObj.parse(bookRecord);
+    cout << bookObj << endl;
+
+    file.close();
+    primaryIndexFile.close();
+}
+
+
+void writeQuery() {
 
 }
 
-void printBook(){
-
-}
-
-void writeQuery(){
-
-}
-
-void exit(){
+void exit() {
     exit(0);
 }
 
-void printSecondaryIndex(){
+void printSecondaryIndex() {
     fstream file("secondary_index_authorName.txt", ios::in | ios::binary);
     short numRec;
     file.seekg(0, ios::beg);
     file.read((char *) &numRec, sizeof(numRec));
     SIndex secondaryIndex[numRec];
     readSecondaryIndex(secondaryIndex, numRec, file);
-    for(int i = 0; i < numRec; i++){
+    for (int i = 0; i < numRec; i++) {
         cout << secondaryIndex[i].key << " " << secondaryIndex[i].RNN << endl;
     }
     file.close();
@@ -558,12 +695,12 @@ void printSecondaryIndex(){
     readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
     labelIDListFile.close();
 
-    for(int i = 0; i < labelIDListNumRec; i++){
+    for (int i = 0; i < labelIDListNumRec; i++) {
         cout << labelIDList[i].primaryIndex << " " << labelIDList[i].RNN << endl;
     }
 }
 
-void prepare(){
+void prepareAuthor() {
     fstream f("primary_index_authorID.txt", ios::out | ios::trunc);
     f.close();
     f.open("label_id_list.txt", ios::out | ios::trunc);
@@ -590,12 +727,42 @@ void prepare(){
     secondaryIndexFile.close();
 }
 
-int main(){
-    prepare();
+void prepareBook() {
+    // Clear or initialize the necessary files and structures for books
+    fstream f("primary_index_ISBN.txt", ios::out | ios::trunc);
+    f.close();
+    f.open("label_id_list_books.txt", ios::out | ios::trunc);
+    f.close();
+    f.open("books.txt", ios::out | ios::trunc);
+    f.close();
+    f.open("secondary_index_authorID.txt", ios::out | ios::trunc);
+    f.close();
+
+    short AvailList = -1;
+    fstream file("books.txt", ios::in | ios::out | ios::binary);
+    file.seekp(0, ios::beg);
+    file.write((char *) &AvailList, sizeof(AvailList));
+    short size = 0;
+    file.write((char *) &size, sizeof(size));
+    file.close();
+
+    fstream secondaryIndexFile("secondary_index_authorID.txt", ios::in | ios::out | ios::binary);
+    fstream labelIDListFile("label_id_list_books.txt", ios::in | ios::out | ios::binary);
+    secondaryIndexFile.seekp(0, ios::beg);
+    labelIDListFile.seekp(0, ios::beg);
+    labelIDListFile.write((char *) &size, sizeof(size));
+    secondaryIndexFile.write((char *) &size, sizeof(size));
+    labelIDListFile.close();
+    secondaryIndexFile.close();
+}
+
+int main() {
+    prepareAuthor();
+    prepareBook();
     int choice;
-    do{
+    do {
         choice = menu();
-        switch(choice){
+        switch (choice) {
             case 1: {
                 Author author;
                 cin >> author;
@@ -614,7 +781,7 @@ int main(){
             case 5:
                 deleteBook();
                 break;
-            case 6:{ // done
+            case 6: { // done
                 string authorID;
                 cout << "Enter Author ID: ";
                 cin >> authorID;
@@ -639,6 +806,6 @@ int main(){
             default:
                 cout << "Invalid choice" << endl;
         }
-    } while(choice != 10);
+    } while (choice != 10);
     return 0;
 }
