@@ -678,6 +678,35 @@ void deleteBook(string ISBN) {
     for (int i = pos; i < numRec; i++) {
         primaryIndex[i] = primaryIndex[i + 1];
     }
+    primaryIndexFile.close();
+
+    string authorID = string(book.authorID);
+
+    // reading the secondary index into main memory
+    short secondaryIndexNumRec;
+    fstream secondaryIndexFile("secondary_index_authorID.txt", ios::in | ios::out | ios::binary);
+    secondaryIndexFile.seekg(0, ios::beg);
+    secondaryIndexFile.read((char *) &secondaryIndexNumRec, sizeof(secondaryIndexNumRec));
+    SIndex secondaryIndex[secondaryIndexNumRec + 1];
+    readSecondaryIndex(secondaryIndex, secondaryIndexNumRec, secondaryIndexFile);
+    secondaryIndexFile.close();
+
+    // reading the label id list into main memory
+    short labelIDListNumRec;
+    fstream labelIDListFile("label_id_list_books.txt", ios::in | ios::out | ios::binary);
+    labelIDListFile.seekg(0, ios::beg);
+    labelIDListFile.read((char *) &labelIDListNumRec, sizeof(labelIDListNumRec));
+    LabelIDList labelIDList[labelIDListNumRec + 1];
+    readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
+    labelIDListFile.close();
+
+    removeRecordFromSecondaryIndex(secondaryIndex, labelIDList, secondaryIndexNumRec, book.ISBN, authorID);
+
+    // update the secondary index file
+    updateSecondaryIndex("secondary_index_authorName.txt", secondaryIndex, secondaryIndexNumRec, secondaryIndexFile);
+
+    // update the label id list file
+    updateLabelIDList("label_id_list.txt", labelIDList, labelIDListNumRec, labelIDListFile);
 
     // Update the primary index file
     updatePrimaryIndex("primary_index_ISBN.txt", primaryIndex, numRec, primaryIndexFile);
