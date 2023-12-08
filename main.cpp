@@ -173,6 +173,7 @@ void readLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream &inFi
         inFile.read((char *) &labelIDListArray[i], sizeof labelIDListArray[i]);
 }
 
+
 int primaryIndexSearch(PIndex primaryIndex[], short numRec, string &key) {
     int l = 0, r = numRec - 1;
     while (l <= r) {
@@ -526,10 +527,7 @@ void updateAuthorName() {
     addNewAuthor(author);
 }
 
-void printAuthor() {
-    string authorID;
-    cout << "Enter Author ID: " << endl;
-    cin >> authorID;
+void printAuthor(string authorID) {
     fstream file("authors.txt", ios::in | ios::out | ios::binary);
     fstream primaryIndexFile("primary_index_authorID.txt", ios::in | ios::out | ios::binary);
     file.seekg(sizeof(short), ios::beg);
@@ -608,7 +606,7 @@ void addNewBook(Book book) {
     addToSecondaryIndex("secondary_index_authorID.txt", "label_id_list_books.txt", book.authorID, book.ISBN);
 
     // add the new record to the label id list
-    addToLabelIDListForBook("label_id_list_books.txt", book.ISBN, RNN);
+//    addToLabelIDListForBook("label_id_list_books.txt", book.ISBN, RNN);
 
     // update the number of records
     numRec++;
@@ -800,10 +798,104 @@ void printBook() {
     primaryIndexFile.close();
 }
 
+void printBooks(string authorID){
+    fstream fileSecondary("secondary_index_authorID.txt", ios::in | ios::binary);
+    fstream fileLabelID("label_id_list_books.txt", ios::out | ios::in | ios::binary);
+    fstream fileBooks("books.txt", ios::in | ios::binary);
+    fstream filePrimary("primary_index_ISBN.txt", ios::in | ios::binary);
 
-void writeQuery() {
+    short numRec;
+    fileSecondary.seekg(0, ios::beg);
+    fileSecondary.read((char*) &numRec, sizeof(numRec));
 
+    SIndex secondaryIndex[numRec];
+    readSecondaryIndex(secondaryIndex, numRec, fileSecondary);
+
+    int pos = secondaryIndexSearch(secondaryIndex, numRec, authorID);
+
+
+
+    fileLabelID.seekg(0, ios::beg);
+    fileLabelID.read((char*) &numRec, sizeof(numRec));
+
+    LabelIDList labelIdList[numRec];
+    readLabelIDList(labelIdList, numRec, fileLabelID);
+
+    fileBooks.seekg(sizeof(short), ios::beg);
+    fileBooks.read((char*)& numRec, sizeof(numRec));
+
+    PIndex primaryList[numRec];
+    readPrimaryIndex(primaryList, numRec, filePrimary);
+
+    pos = secondaryIndex[pos].RNN;
+
+    while(~pos){
+        string primaryIndex = labelIdList[pos].primaryIndex;
+        int posBook = primaryIndexSearch(primaryList, numRec, primaryIndex);
+        fileBooks.seekg(primaryList[posBook].RNN, ios::beg);
+
+        Book book;
+        short len;
+        fileBooks.read((char*)& len, sizeof(len));
+        char bookRecord[len + 1];
+        fileBooks.read(bookRecord, len);
+        bookRecord[len] = '\0';
+        book.parse(bookRecord);
+
+        cout << book << endl;
+        pos = labelIdList[pos].RNN;
+    }
 }
+
+void printAuthorName(string authorID){
+    fstream file("authors.txt", ios::in | ios::out | ios::binary);
+    fstream primaryIndexFile("primary_index_authorID.txt", ios::in | ios::out | ios::binary);
+    file.seekg(sizeof(short), ios::beg);
+    short numRec;
+    file.read((char *) &numRec, sizeof(numRec));
+    PIndex primaryIndex[numRec];
+    primaryIndexFile.seekg(0, ios::beg);
+    readPrimaryIndex(primaryIndex, numRec, primaryIndexFile);
+    int pos = primaryIndexSearch(primaryIndex, numRec, authorID);
+    if (pos == -1) {
+        cout << "Author not found" << endl;
+        return;
+    }
+    int RNN = primaryIndex[pos].RNN;
+    short len;
+    file.seekg(RNN, ios::beg);
+    file.read((char *) &len, sizeof(len));
+    char author[len + 1];
+    file.read(author, len);
+    author[len] = '\0';
+    Author authorObj;
+    authorObj.parse(author);
+    cout << authorObj.name << endl;
+    file.close();
+    primaryIndexFile.close();
+}
+void writeQuery() {
+    cout << "1. Select all from Authors where Author ID = xxx" << endl;
+    cout << "2. Select all from Books where Author ID = xxx" << endl;
+    cout << "3. Select Author Name from Authors where Author ID = xxx" << endl;
+
+    cout << "Enter your choice";
+    char choice;
+    cin >> choice;
+
+    cout << "Enter ID";
+    string id;
+    cin >> id;
+
+    if(choice == '1'){
+        printAuthor(id);
+    }else if (choice == '2'){
+        printBooks(id);
+    }else if (choice == '3'){
+        printAuthorName(id);
+    }
+}
+
 
 void exit() {
     exit(0);
@@ -928,9 +1020,13 @@ int main() {
                 deleteAuthor(authorID);
                 break;
             }
-            case 7:
-                printAuthor(); // done
+            case 7: {
+                string authorID;
+                cout << "Enter Author ID: " << endl;
+                cin >> authorID;
+                printAuthor(authorID); // done
                 break;
+            }
             case 8:
                 printBook();
                 break;
