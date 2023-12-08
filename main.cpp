@@ -173,7 +173,6 @@ void readLabelIDList(LabelIDList labelIDListArray[], short numRec, fstream &inFi
         inFile.read((char *) &labelIDListArray[i], sizeof labelIDListArray[i]);
 }
 
-
 int primaryIndexSearch(PIndex primaryIndex[], short numRec, string &key) {
     int l = 0, r = numRec - 1;
     while (l <= r) {
@@ -348,12 +347,28 @@ void removeRecordFromSecondaryIndex(SIndex secondaryIndex[], LabelIDList labelID
     }
 }
 
+bool checkKeyExistence(string fileName, char key[], short numRec) {
+    fstream primaryIndexFile(fileName.c_str(), ios::in | ios::out | ios::binary);
+    primaryIndexFile.seekg(0, ios::beg);
+    PIndex primaryIndex[numRec];
+    readPrimaryIndex(primaryIndex, numRec, primaryIndexFile);
+    primaryIndexFile.close();
+    string keyString = string(key);
+    short keyExists = primaryIndexSearch(primaryIndex, numRec, keyString);
+    return keyExists != -1;
+}
+
 void addNewAuthor(Author author) {
+
     fstream file("authors.txt", ios::in | ios::out | ios::binary);
     file.seekg(sizeof(short), ios::beg);
     short numRec;
     file.read((char *) &numRec, sizeof(numRec));
 
+    if(checkKeyExistence("primary_index_authorID.txt", author.ID, numRec)) {
+        cout << "This author ID already exists" << endl;
+        return;
+    }
     // read from user
     string authorString = author.format(); // format to string
     short len = (short) authorString.size();
@@ -382,6 +397,8 @@ void addNewAuthor(Author author) {
     file.write((char *) &numRec, sizeof(numRec));
     file.close();
 }
+
+void deleteBooksByAuthorID(string authorID);
 
 void deleteAuthor(string authorID) {
     // open files
@@ -475,6 +492,8 @@ void deleteAuthor(string authorID) {
 
     // update the primary index file
     updatePrimaryIndex("primary_index_authorID.txt", primaryIndex, numRec, primaryIndexFile);
+
+    deleteBooksByAuthorID(authorID);
 }
 
 void updateAuthorName() {
@@ -555,33 +574,17 @@ void printAuthor(string authorID) {
     primaryIndexFile.close();
 }
 
-void addToLabelIDListForBook(string labelFileName, string ISBN, short RNN) {
-    fstream labelIDListFile(labelFileName.c_str(), ios::in | ios::out | ios::binary);
-    short labelIDListNumRec;
-    labelIDListFile.seekg(0, ios::beg);
-    labelIDListFile.read((char *) &labelIDListNumRec, sizeof(labelIDListNumRec));
-    LabelIDList labelIDList[labelIDListNumRec + 1];
-    readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
-    labelIDListFile.close();
-
-    short i = 0;
-    for (; i <= labelIDListNumRec; i++) {
-        if (labelIDList[i].RNN == FREE || i == labelIDListNumRec) {
-            strcpy(labelIDList[i].primaryIndex, ISBN.c_str());
-            labelIDList[i].RNN = RNN;
-            break;
-        }
-    }
-    labelIDListNumRec += (i == labelIDListNumRec);
-    updateLabelIDList(labelFileName, labelIDList, labelIDListNumRec, labelIDListFile);
-}
-
 void addNewBook(Book book) {
+
     fstream file("books.txt", ios::in | ios::out | ios::binary);
     file.seekg(sizeof(short), ios::beg);
     short numRec;
     file.read((char *) &numRec, sizeof(numRec));
 
+    if(checkKeyExistence("primary_index_ISBN.txt", book.ISBN, numRec)) {
+        cout << "This author ID already exists" << endl;
+        return;
+    }
 
     // read from user
     string bookString = book.format(); // format to string
@@ -701,15 +704,41 @@ void deleteBook(string ISBN) {
     removeRecordFromSecondaryIndex(secondaryIndex, labelIDList, secondaryIndexNumRec, book.ISBN, authorID);
 
     // update the secondary index file
-    updateSecondaryIndex("secondary_index_authorName.txt", secondaryIndex, secondaryIndexNumRec, secondaryIndexFile);
+    updateSecondaryIndex("secondary_index_authorID.txt", secondaryIndex, secondaryIndexNumRec, secondaryIndexFile);
 
     // update the label id list file
-    updateLabelIDList("label_id_list.txt", labelIDList, labelIDListNumRec, labelIDListFile);
+    updateLabelIDList("label_id_list_books.txt", labelIDList, labelIDListNumRec, labelIDListFile);
 
     // Update the primary index file
     updatePrimaryIndex("primary_index_ISBN.txt", primaryIndex, numRec, primaryIndexFile);
 }
 
+void deleteBooksByAuthorID(string authorID){
+    fstream secondaryIndexFile("secondary_index_authorID.txt", ios::in | ios::out | ios::binary);
+    short secondaryIndexNumRec;
+    secondaryIndexFile.seekg(0, ios::beg);
+    secondaryIndexFile.read((char *) &secondaryIndexNumRec, sizeof(secondaryIndexNumRec));
+    SIndex secondaryIndex[secondaryIndexNumRec];
+    readSecondaryIndex(secondaryIndex, secondaryIndexNumRec, secondaryIndexFile);
+    secondaryIndexFile.close();
+
+    short index = secondaryIndexSearch(secondaryIndex, secondaryIndexNumRec, authorID);
+
+    fstream labelIDListFile("label_id_list_books.txt", ios::in | ios::out | ios::binary);
+    short labelIDListNumRec;
+    labelIDListFile.seekg(0, ios::beg);
+    labelIDListFile.read((char *) &labelIDListNumRec, sizeof(labelIDListNumRec));
+    LabelIDList labelIDList[labelIDListNumRec];
+    readLabelIDList(labelIDList, labelIDListNumRec, labelIDListFile);
+    labelIDListFile.close();
+
+    short RNN = secondaryIndex[index].RNN;
+
+    while(~RNN){
+        deleteBook(labelIDList[RNN].primaryIndex);
+        RNN = labelIDList[RNN].RNN;
+    }
+}
 
 void updateBookTitle(){
 
@@ -757,7 +786,6 @@ void updateBookTitle(){
     strcpy(book.title, newBookTitle.c_str());
     addNewBook(book);
 }
-
 
 void printBook() {
     string ISBN;
@@ -812,8 +840,6 @@ void printBooks(string authorID){
     readSecondaryIndex(secondaryIndex, numRec, fileSecondary);
 
     int pos = secondaryIndexSearch(secondaryIndex, numRec, authorID);
-
-
 
     fileLabelID.seekg(0, ios::beg);
     fileLabelID.read((char*) &numRec, sizeof(numRec));
@@ -874,6 +900,7 @@ void printAuthorName(string authorID){
     file.close();
     primaryIndexFile.close();
 }
+
 void writeQuery() {
     cout << "1. Select all from Authors where Author ID = xxx" << endl;
     cout << "2. Select all from Books where Author ID = xxx" << endl;
@@ -895,7 +922,6 @@ void writeQuery() {
         printAuthorName(id);
     }
 }
-
 
 void exit() {
     exit(0);
